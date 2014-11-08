@@ -1,0 +1,16 @@
+{
+    "pages": [
+        "www.example.com/page/",
+        "https://api.server.io:8081/foo/bar",
+    ],
+    "email_username": "username@smtp.server.com",
+    "email_password": "passw0rd",
+    "email_host": "smtp.server.com",
+    "email_from": "no-reply@server.com",
+    "email_to": ["address1@receiver.net", "address2@receiver.net"],
+    "email_subject": "Pagemonitor report",
+    "check_interval": 300,
+    "fail_threshold": 3,
+    "logfile": "/var/log/pagemonitor.log"
+}
+
