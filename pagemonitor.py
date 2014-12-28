@@ -17,6 +17,7 @@ CONFIG_KEYS = ["email_username",
                "pages",
                "check_interval",
                "fail_threshold",
+               "logfile",
                ]
 
 log = logging.getLogger("pagemonitor")
