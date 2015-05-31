@@ -16,4 +16,4 @@ Running with docker
 ===================
 * docker pull heiparta/pagemonitor
 * Create configuration file conf.json
-* docker run -d -v <absolute path to conf.json>:/etc/pagemonitor/pagemonitor.json heiparta/pagemonitor
+* docker run -d --name pagemonitor --restart=always -v "absolute path to configuration json":/etc/pagemonitor/pagemonitor.json heiparta/pagemonitor
