@@ -1,11 +1,12 @@
 from datetime import datetime
 import gevent
-import simplejson as json
 import logging
 from logging.handlers import RotatingFileHandler, SMTPHandler
 import os
 import requests
 import signal
+import simplejson as json
+import sys
 
 PAGEMONITOR_CONFIG_PATH = '/etc/pagemonitor/pagemonitor.json'
 CONFIG_KEYS = ["email_username",
@@ -22,6 +23,11 @@ CONFIG_KEYS = ["email_username",
 
 log = logging.getLogger("pagemonitor")
 log.setLevel(logging.INFO)
+
+def sigterm_handler(signal, stack_frame):
+    # Just quit, don't worry about the state of the greenlets
+    sys.exit(0)
+signal.signal(signal.SIGTERM, sigterm_handler)
 
 
 class PageGreenlet(gevent.Greenlet):
