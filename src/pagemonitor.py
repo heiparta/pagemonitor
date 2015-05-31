@@ -7,7 +7,7 @@ import os
 import requests
 import signal
 
-PAGEMONITOR_CONFIG_PATH = 'pagemonitor.json'
+PAGEMONITOR_CONFIG_PATH = '/etc/pagemonitor/pagemonitor.json'
 CONFIG_KEYS = ["email_username",
                "email_password",
                "email_host",
