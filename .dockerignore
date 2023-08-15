@@ -1,4 +1,6 @@
 Dockerfile
+.gitignore
 .dockerignore
 .git
-
+pagemonitor.log
+requirements.in

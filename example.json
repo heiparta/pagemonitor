@@ -1,7 +1,6 @@
 {
     "pages": [
-        "www.example.com/page/",
-        "https://api.server.io:8081/foo/bar",
+        "https://www.google.fi/"
     ],
     "email_username": "username@smtp.server.com",
     "email_password": "passw0rd",

@@ -1,9 +1,9 @@
+import asyncio
 from datetime import datetime
-import gevent
 import logging
 from logging.handlers import RotatingFileHandler, SMTPHandler
 import os
-import requests
+import aiohttp
 import signal
 import simplejson as json
 import sys
@@ -22,19 +22,15 @@ CONFIG_KEYS = ["email_username",
                ]
 
 log = logging.getLogger("pagemonitor")
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 
 def sigterm_handler(signal, stack_frame):
-    # Just quit, don't worry about the state of the greenlets
+    # Just quit, don't worry about the state of the asyncio tasks
     sys.exit(0)
 signal.signal(signal.SIGTERM, sigterm_handler)
 
-
-class PageGreenlet(gevent.Greenlet):
+class PageAsyncTask:
     def __init__(self, url, config):
-        super(PageGreenlet, self).__init__(self)
-        if not url.startswith('http'):
-            url = 'http://' + url
         self.url = url
         self.fail_start = None
         self.fail_count = 0
@@ -43,26 +39,31 @@ class PageGreenlet(gevent.Greenlet):
         self.poll_interval = config['check_interval']
         self.fail_threshold = config['fail_threshold']
 
-    def run(self):
-        log.info("Starting to monitor page '%s'", self.url)
+    async def fetch_page(self):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(self.url) as response:
+                log.debug("%s - %s", self.url, response.status)
+                return response
+
+    async def monitor_page(self):
         while True:
-            response = requests.get(self.url)
-            if response.ok:
+            response = await self.fetch_page()
+            if response.status == 200:
                 if self.fail_start is not None:
-                    # url is back online, log error to get email notification
+                    # URL is back online, log error to get email notification
                     log.error("Page %s is back online after %s downtime",
-                        self.url, datetime.utcnow() - self.fail_start)
+                              self.url, datetime.utcnow() - self.fail_start)
                     self.fail_start = None
                     self.fail_count = 0
             else:
                 self.fail_count += 1
                 if self.fail_start is None:
-                    # url has gone down
+                    # URL has gone down
                     self.fail_start = datetime.utcnow()
                     log.info("Page %s started failing at %s", self.url, self.fail_start)
                 if self.fail_count == self.fail_threshold:
                     log.error("Page %s has been failing since %s", self.url, self.fail_start)
-            gevent.sleep(self.config['check_interval'])
+            await asyncio.sleep(self.config['check_interval'])
 
 def load_config(config_path):
     config = dict()
@@ -74,7 +75,7 @@ def load_config(config_path):
             raise Exception("Required parameter {0} not found in config file {1}".format(key, config_path))
         value = raw_config[key]
         if key == "pages":
-            if isinstance(value, basestring):
+            if isinstance(value, str):
                 value = [value]
             if not isinstance(value, list):
                 raise Exception("Invalid value for parameter {0} in config file {1}".format(key, config_path))
@@ -102,13 +103,13 @@ def setup_logging(config):
     email_handler.setLevel(logging.ERROR)
     log.addHandler(email_handler)
 
-def main():
+async def main():
     config = load_config(os.environ.get('PAGEMONITOR_CONFIG_PATH', PAGEMONITOR_CONFIG_PATH))
     setup_logging(config)
-    greenlets = [PageGreenlet(url, config) for url in config['pages']]
-    [g.start() for g in greenlets]
-    gevent.joinall(greenlets)
+    tasks = [PageAsyncTask(url, config).monitor_page() for url in config['pages']]
+    await asyncio.gather(*tasks)
 
 if __name__ == '__main__':
-    gevent.signal(signal.SIGQUIT, gevent.kill)
-    main()
+    loop = asyncio.get_event_loop()
+    loop.add_signal_handler(signal.SIGQUIT, loop.stop)
+    loop.run_until_complete(main())
